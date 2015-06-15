@@ -3,8 +3,10 @@ from __future__ import division
 from serial import Serial
 import struct, sys
 import gmail, time, unicodedata
+import os, glob, ftplib
+import requests, json
+import FPS
 
-g = gmail.login("sensibledata2@gmail.com", "verysensible")
 # import RPi.GPIO as GPIO
 
 # SERIAL_PORT = '/dev/tty.usbmodemfa141'
@@ -23,18 +25,18 @@ RES_X = 160
 MAX_X =  2500
 MIN_X = -2500
 MAX_Y =  2500
-MIN_Y = -2500
+MIN_Y = -2300
 MAX_Z =  2000
 MIN_Z = -2000
 
-passportTexts = ["MARTIN","26     MALE","IIII of 10"]
+passportTexts = ["MARTIN","26     MALE","40 PERCENT","NONE"]
 # passportTexts = ["ABC"]
 
 # if the stepper is wired that it turns backwards
 IS_WHEEL_INVERTED = False
 
 MAX_LETTERS = 12
-LINE_HEIGHT = 1200
+LINE_HEIGHT = 1000
 MARGIN_TOP = 1600
 letterIndex = 1
 lineNr = 0
@@ -185,7 +187,53 @@ def calcLetterPos():
     letterXPos = max(MIN_X, letterXPos)
     letterYPos = max(MIN_Y, letterYPos)
     return (letterXPos,letterYPos)
-    
+
+def uploadLatestImg():
+    session = ftplib.FTP('109.239.61.126','336054-90-sensibleData','JRWZr3EH&&cC')
+    # latestImagePath = max(glob.iglob('/home/pi/SensibleData/images/*.jpg'), key=os.path.getctime)
+    latestImagePath = max(glob.iglob('/Users/martin/Dropbox/ECAL/Diplome/SensibleData/images/*.jpg'), key=os.path.getctime)
+    latestImageFilename = os.path.basename(latestImagePath)
+    file = open(latestImagePath,'rb')               # file to send
+    session.storbinary('STOR imageToAnalyze.jpg', file)     # send the file
+    file.close()                                    # close file and FTP
+    session.quit()
+
+def getFaceAnalysis():
+    global passportTexts
+    rekognition_url = "http://rekognition.com/func/api/"
+    data = {'api_key':'yHvz5xQExIxdKT1M', 'api_secret':'IoAdfLyIgoPBn8VB', 'jobs':'face_gender_emotion_age_beauty', 'urls':'http://idowebsites.ch/sensibleData/imageToAnalyze.jpg'}
+    print "Trying to get Face Analysis from Rekognition"
+    r = requests.get(rekognition_url, params=data)
+    jsondata =  r.json()
+    # jsondata = {u'url': u'https://www.dropbox.com/s/m8gkdlh6zdeea9e/2015-05-16%2016.13.08.jpg?dl=1', u'face_detection': [{u'emotion': {u'calm': 0.03, u'confused': 0.28, u'sad': 0.09}, u'confidence': 0.99, u'beauty': 0.12593, u'pose': {u'yaw': 0.08, u'roll': 0.1, u'pitch': 14.79}, u'sex': 1, u'race': {u'white': 0.58}, u'boundingbox': {u'tl': {u'y': 48.46, u'x': 139.23}, u'size': {u'width': 376.15, u'height': 376.15}}, u'smile': 0, u'quality': {u'brn': 0.51, u'shn': 1.6}, u'mustache': 0, u'beard': 0}], u'ori_img_size': {u'width': 576, u'height': 576}, u'usage': {u'status': u'Succeed.', u'quota': 19968, u'api_id': u'yHvz5xQExIxdKT1M'}}
+    print "Got it"
+    emotions = jsondata["face_detection"][0]["emotion"]
+    beauty = jsondata["face_detection"][0]["beauty"]
+    # 0 = female, 1 = male 
+    if jsondata["face_detection"][0]["sex"]==1:
+        sex = "MALE"
+    else:
+        sex = "FEMALE"
+    age = jsondata["face_detection"][0]["age"]
+    highestVal = 0
+    highestAttr = ""
+    for att,val in emotions.iteritems():
+        print att,val
+        if val>highestVal:
+            highestVal = val
+            highestAttr = att
+    if len(highestAttr)<4:
+        if highestVal < 0.2:
+            highestAttr = "A BIT "+highestAttr
+        elif highestVal < 0.5:
+            highestAttr = "RATHER "+highestAttr
+        elif highestVal < 0.6:
+            highestAttr = "QUITE "+highestAttr
+        elif highestVal > 0.7:
+            highestAttr = "VERY "+highestAttr 
+    passportTexts[1] = str(int(age))+"  "+sex
+    passportTexts[2] = str(int(beauty*100))
+    passportTexts[3] = highestAttr
 
 def launchStamp():
     global serial, MIN_Y, MAX_Y, MIN_X, MAX_X,letterIndex,lineNr, IS_WHEEL_INVERTED
@@ -203,11 +251,8 @@ def launchStamp():
     # do a handshake everytime it is executed, but piccolo only responds once
     serial.flushInput()
 
-    # sendRotation(fullturnSteps)
-    testText = "rather beautiful"
-
     # sendXY(INKPOS_X,INKPOS_Y)
-    # time.sleep(2)
+    time.sleep(1)
     print 'at INKPOS'
     # calibrate()
 
@@ -224,6 +269,8 @@ def launchStamp():
         for letter in letterList:
             global currentStep
             letterUnicodeIndex = ord(letter)
+            gotoLetterXY()
+            time.sleep(0.3)
             if (letter==" "):
                 makeSpace()
             else:
@@ -259,9 +306,8 @@ def launchStamp():
                     stepsToTake=stepsToTake+2038
                 sendRotation(stepsToTake)
                 currentStep = nextStep
-                getInk()
-                gotoLetterXY()
                 time.sleep(0.2)
+                # getInk()
                 print 'Stepped to '+letter+', '+str(stepsToTake)+' steps'
                 zDownAndUpStamp()
                 # time.s(0.5)
@@ -274,7 +320,7 @@ def launchStamp():
     # time.s(0.3)
     sendXY(MIN_X,MAX_Y)
     sendZ(Z_UP_POS)
-    stepsToZero = -currentStep
+    stepsToZero = fullturnSteps-currentStep
     sendRotation(stepsToZero)
     # print 'Stepped to zero'
     time.sleep(1)
@@ -286,6 +332,13 @@ def launchStamp():
     serial.flushOutput()
     serial.close()
     # raw_input("press enter to continue")
+
+def turnOnFingerprintLED():
+    fps =  FPS.FPS_GT511C3(device_name='/dev/ttyAMA0',baud=9600,timeout=3,is_com=False)
+    time.sleep(3)
+    fps.SetLED(True)
+    time.sleep(1)
+    fps.Close()
 
 if __name__ == '__main__':
     while True:
@@ -302,7 +355,10 @@ if __name__ == '__main__':
             passportTexts[0] = senderSubstring.upper()
             print "NAME: "+passportTexts[0]
             unread[0].read()
+            # uploadLatestImg()
+            getFaceAnalysis()
             launchStamp()
+            turnOnFingerprintLED()
 
             # Dear ...,
         time.sleep(4)
