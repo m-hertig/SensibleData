@@ -114,7 +114,7 @@ def doStamp():
     serial.flushInput()
     sendZ(Z_UP_POS)
     getInk();
-    sendXY(100,000)
+    sendXY(1000,1000)
     zDownAndUpStamp()
     time.sleep(0.5)
     # Send end of transmission
@@ -159,11 +159,11 @@ def sendMail(reciever):
     msgAlternative = MIMEMultipart('alternative')
     msgRoot.attach(msgAlternative)
 
-    msgText = MIMEText('Hi Martin\n\nHere some people with matching beauty:\n\nKind regards\nSensible Data')
+    msgText = MIMEText('Hi Martin\n\nHere some people with matching beauty: http://bit.ly/1GIh3Pf \n\nKind regards\nSensible Data')
     msgAlternative.attach(msgText)
 
     # We reference the image in the IMG SRC attribute by the ID we give it below
-    msgText = MIMEText('Hi Martin<br><br>Thank you for your contribution. Check out some people with matching beauty:<br>Kind regards<br>Sensible Data Administration<br><br><img src="cid:image1"><br>', 'html')
+    msgText = MIMEText('Hi Martin<br><br>Thank you for your contribution. Check out the gallery: <a href="http://bit.ly/1GIh3Pf" alt="gallery_link">http://bit.ly/1GIh3Pf</a><br>Kind regards<br>Sensible Data Administration<br><br><img src="cid:image1"><br>', 'html')
     msgAlternative.attach(msgText)
 
     # This example assumes the image is in the current directory

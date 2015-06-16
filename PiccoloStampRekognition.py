@@ -3,9 +3,11 @@ from __future__ import division
 from serial import Serial
 import struct, sys
 import gmail, time, unicodedata
-import os, glob, ftplib
+import os, glob, ftplib, urllib
 import requests, json
 import FPS
+from email.utils import parseaddr
+from configobj import ConfigObj
 
 # import RPi.GPIO as GPIO
 
@@ -29,7 +31,7 @@ MIN_Y = -2300
 MAX_Z =  2000
 MIN_Z = -2000
 
-passportTexts = ["MARTIN","26     MALE","40 PERCENT","NONE"]
+passportTexts = ["UNKNOWN","999     BOTH","40 PERCENT","NONE"]
 # passportTexts = ["ABC"]
 
 # if the stepper is wired that it turns backwards
@@ -60,6 +62,12 @@ isAtMagnet = False
 # internal / calculated
 stepsPerLetter = fullturnSteps / letterCount
 currentStep = 0
+
+beauty=0.55
+age=26
+sex="MALE"
+highestAttr="NONE"
+latestImagePath = ""
 
 # GPIO.setmode(GPIO.BCM)
 # GPIO.setup(4, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
@@ -153,14 +161,13 @@ def zDownAndUpInk():
     # time.sleep(0.2)
     sendZ(Z_UP_POS)
 
-def getInk():
+def gotoInkXY():
     global Z_UP_POS,INKPOS_X,INKPOS_Y
 
     sendZ(Z_UP_POS)
     # sendXY(0,0)
     # time.sleep(0.5)
     sendXY(INKPOS_X,INKPOS_Y)
-    zDownAndUpInk()
 
 def gotoLetterXY():
     global letterIndex
@@ -189,17 +196,33 @@ def calcLetterPos():
     return (letterXPos,letterYPos)
 
 def uploadLatestImg():
+    global latestImagePath
     session = ftplib.FTP('109.239.61.126','336054-90-sensibleData','JRWZr3EH&&cC')
     # latestImagePath = max(glob.iglob('/home/pi/SensibleData/images/*.jpg'), key=os.path.getctime)
-    latestImagePath = max(glob.iglob('/Users/martin/Dropbox/ECAL/Diplome/SensibleData/images/*.jpg'), key=os.path.getctime)
+    latestImagePath = max(glob.iglob('/home/pi/SensibleData/images/*.jpg'), key=os.path.getctime)
     latestImageFilename = os.path.basename(latestImagePath)
     file = open(latestImagePath,'rb')               # file to send
     session.storbinary('STOR imageToAnalyze.jpg', file)     # send the file
     file.close()                                    # close file and FTP
     session.quit()
 
+def uploadAnalyzedImg():
+    global latestImagePath,beauty,age,sex,highestAttr
+    session = ftplib.FTP('109.239.61.126','336054-90-sensibleData','JRWZr3EH&&cC')
+    # latestImagePath = max(glob.iglob('/home/pi/SensibleData/images/*.jpg'), key=os.path.getctime)
+    newFilename = str(int(beauty*100))+"-"+str(int(age))+"-"+str(sex)+"-"+highestAttr+"-"+str(int(time.time()))+".jpg"
+    filenameUrlEncoded = urllib.quote_plus(newFilename)
+    storcommand = "STOR "+"images/"+filenameUrlEncoded
+    file = open(latestImagePath,'rb')         # file to send
+    session.storbinary(storcommand, file)     # send the file
+    file.close()                                    # close file and FTP
+    session.sendcmd('SITE CHMOD 644 images/' + filenameUrlEncoded)
+    session.quit()
+    uploadedUrl = "http://idowebsites.ch/sensibleData/images/"+filenameUrlEncoded
+    print uploadedUrl
+
 def getFaceAnalysis():
-    global passportTexts
+    global passportTexts, beauty, age, sex, highestAttr
     rekognition_url = "http://rekognition.com/func/api/"
     data = {'api_key':'yHvz5xQExIxdKT1M', 'api_secret':'IoAdfLyIgoPBn8VB', 'jobs':'face_gender_emotion_age_beauty', 'urls':'http://idowebsites.ch/sensibleData/imageToAnalyze.jpg'}
     print "Trying to get Face Analysis from Rekognition"
@@ -207,33 +230,37 @@ def getFaceAnalysis():
     jsondata =  r.json()
     # jsondata = {u'url': u'https://www.dropbox.com/s/m8gkdlh6zdeea9e/2015-05-16%2016.13.08.jpg?dl=1', u'face_detection': [{u'emotion': {u'calm': 0.03, u'confused': 0.28, u'sad': 0.09}, u'confidence': 0.99, u'beauty': 0.12593, u'pose': {u'yaw': 0.08, u'roll': 0.1, u'pitch': 14.79}, u'sex': 1, u'race': {u'white': 0.58}, u'boundingbox': {u'tl': {u'y': 48.46, u'x': 139.23}, u'size': {u'width': 376.15, u'height': 376.15}}, u'smile': 0, u'quality': {u'brn': 0.51, u'shn': 1.6}, u'mustache': 0, u'beard': 0}], u'ori_img_size': {u'width': 576, u'height': 576}, u'usage': {u'status': u'Succeed.', u'quota': 19968, u'api_id': u'yHvz5xQExIxdKT1M'}}
     print "Got it"
-    emotions = jsondata["face_detection"][0]["emotion"]
-    beauty = jsondata["face_detection"][0]["beauty"]
-    # 0 = female, 1 = male 
-    if jsondata["face_detection"][0]["sex"]==1:
-        sex = "MALE"
-    else:
-        sex = "FEMALE"
-    age = jsondata["face_detection"][0]["age"]
-    highestVal = 0
-    highestAttr = ""
-    for att,val in emotions.iteritems():
-        print att,val
-        if val>highestVal:
-            highestVal = val
-            highestAttr = att
-    if len(highestAttr)<4:
-        if highestVal < 0.2:
-            highestAttr = "A BIT "+highestAttr
-        elif highestVal < 0.5:
-            highestAttr = "RATHER "+highestAttr
-        elif highestVal < 0.6:
-            highestAttr = "QUITE "+highestAttr
-        elif highestVal > 0.7:
-            highestAttr = "VERY "+highestAttr 
-    passportTexts[1] = str(int(age))+"  "+sex
-    passportTexts[2] = str(int(beauty*100))
-    passportTexts[3] = highestAttr
+    print jsondata
+    try:
+        emotions = jsondata["face_detection"][0]["emotion"]
+        beauty = jsondata["face_detection"][0]["beauty"]
+        # 0 = female, 1 = male 
+        if jsondata["face_detection"][0]["sex"]==1:
+            sex = "MALE"
+        else:
+            sex = "FEMALE"
+        age = jsondata["face_detection"][0]["age"]
+        highestVal = 0
+        highestAttr = ""
+        for att,val in emotions.iteritems():
+            print att,val
+            if val>highestVal:
+                highestVal = val
+                highestAttr = att
+        if len(highestAttr)<4:
+            if highestVal < 0.2:
+                highestAttr = "A BIT "+highestAttr
+            elif highestVal < 0.5:
+                highestAttr = "RATHER "+highestAttr
+            elif highestVal < 0.6:
+                highestAttr = "QUITE "+highestAttr
+            elif highestVal > 0.7:
+                highestAttr = "VERY "+highestAttr 
+        passportTexts[1] = str(int(age))+"  "+sex
+        passportTexts[2] = str(int(beauty*100))
+        passportTexts[3] = highestAttr
+    except:
+        print "error parsing data"
 
 def launchStamp():
     global serial, MIN_Y, MAX_Y, MIN_X, MAX_X,letterIndex,lineNr, IS_WHEEL_INVERTED
@@ -269,7 +296,6 @@ def launchStamp():
         for letter in letterList:
             global currentStep
             letterUnicodeIndex = ord(letter)
-            gotoLetterXY()
             time.sleep(0.3)
             if (letter==" "):
                 makeSpace()
@@ -304,11 +330,13 @@ def launchStamp():
                 stepsToTake = (nextStep - currentStep)
                 if stepsToTake<0:
                     stepsToTake=stepsToTake+2038
+                gotoInkXY()
                 sendRotation(stepsToTake)
                 currentStep = nextStep
+                zDownAndUpInk()
                 time.sleep(0.2)
-                # getInk()
                 print 'Stepped to '+letter+', '+str(stepsToTake)+' steps'
+                gotoLetterXY()
                 zDownAndUpStamp()
                 # time.s(0.5)
                 print 'got ink'
@@ -322,6 +350,7 @@ def launchStamp():
     sendZ(Z_UP_POS)
     stepsToZero = fullturnSteps-currentStep
     sendRotation(stepsToZero)
+    currentStep = 0
     # print 'Stepped to zero'
     time.sleep(1)
     # Send end of transmission
@@ -340,9 +369,22 @@ def turnOnFingerprintLED():
     time.sleep(1)
     fps.Close()
 
+def saveMailAddress(addressString):
+    newAddress = parseaddr(addressString)
+    config = ConfigObj('latestMailAdr.cfg')
+    # print config['adress']
+    config['adress'] = newAddress[1]
+    config.write()
+
+def resetPositions():
+    global currentX,currentY,currentZ,MIN_X,MIN_Y,MAX_Z
+    currentX = MIN_X
+    currentY = MIN_Y
+    currentZ = MAX_Z
+
 if __name__ == '__main__':
     while True:
-        g = gmail.login("sensibledata2@gmail.com", "verysensible")
+        g = gmail.login("sensibledata1@gmail.com", "verysensible")
         unread = g.inbox().mail(unread=True)
         if len(unread)>0: 
             # None
@@ -355,10 +397,13 @@ if __name__ == '__main__':
             passportTexts[0] = senderSubstring.upper()
             print "NAME: "+passportTexts[0]
             unread[0].read()
-            # uploadLatestImg()
+            uploadLatestImg()
             getFaceAnalysis()
             launchStamp()
+            uploadAnalyzedImg()
             turnOnFingerprintLED()
+            saveMailAddress(sender)
+            resetPositions()
 
             # Dear ...,
         time.sleep(4)
