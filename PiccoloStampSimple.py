@@ -159,11 +159,11 @@ def sendMail(reciever):
     msgAlternative = MIMEMultipart('alternative')
     msgRoot.attach(msgAlternative)
 
-    msgText = MIMEText('Hi Martin\n\nHere some people with matching beauty: http://bit.ly/1GIh3Pf \n\nKind regards\nSensible Data')
+    msgText = MIMEText('Hi \n\nHere some people with matching beauty: http://bit.ly/1GIh3Pf \n\nKind regards\nSensible Data')
     msgAlternative.attach(msgText)
 
     # We reference the image in the IMG SRC attribute by the ID we give it below
-    msgText = MIMEText('Hi Martin<br><br>Thank you for your contribution. Check out the gallery: <a href="http://bit.ly/1GIh3Pf" alt="gallery_link">http://bit.ly/1GIh3Pf</a><br>Kind regards<br>Sensible Data Administration<br><br><img src="cid:image1"><br>', 'html')
+    msgText = MIMEText('Hi<br><br>Thank you for your contribution. Here a person that matches your nose lenght: <br><img src="cid:image2"><br><br>Romain Cazier<br>romain.cazier@gmail.com<br><br><img src="cid:image3"><br><br>Kind regards<br>Sensible Data Administration<br><br><img src="cid:image1"><br>', 'html')
     msgAlternative.attach(msgText)
 
     # This example assumes the image is in the current directory
@@ -174,6 +174,24 @@ def sendMail(reciever):
     # Define the image's ID as referenced above
     msgImage.add_header('Content-ID', '<image1>')
     msgRoot.attach(msgImage)
+
+    # This example assumes the image is in the current directory
+    fpTwo = open('/home/pi/SensibleData/mailImages/mailattach.jpg', 'rb')
+    msgImageTwo = MIMEImage(fpTwo.read())
+    fpTwo.close()
+
+    # Define the image's ID as referenced above
+    msgImageTwo.add_header('Content-ID', '<image2>')
+    msgRoot.attach(msgImageTwo)
+
+    # This example assumes the image is in the current directory
+    fpThree = open('/home/pi/SensibleData/mailImages/fingerprint.png', 'rb')
+    msgImageThree = MIMEImage(fpThree.read())
+    fpThree.close()
+
+    # Define the image's ID as referenced above
+    msgImageThree.add_header('Content-ID', '<image3>')
+    msgRoot.attach(msgImageThree)
 
     # Send the email (this example assumes SMTP authentication is required)
     smtp = smtplib.SMTP("smtp.gmail.com", 587)

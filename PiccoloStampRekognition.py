@@ -236,9 +236,9 @@ def getFaceAnalysis():
         beauty = jsondata["face_detection"][0]["beauty"]
         # 0 = female, 1 = male 
         if jsondata["face_detection"][0]["sex"]==1:
-            sex = "MALE"
+            sex = "M"
         else:
-            sex = "FEMALE"
+            sex = "F"
         age = jsondata["face_detection"][0]["age"]
         highestVal = 0
         highestAttr = ""
@@ -256,7 +256,7 @@ def getFaceAnalysis():
                 highestAttr = "QUITE "+highestAttr
             elif highestVal > 0.7:
                 highestAttr = "VERY "+highestAttr 
-        passportTexts[1] = str(int(age))+"  "+sex
+        passportTexts[1] = str(int(age))+"     "+sex
         passportTexts[2] = str(int(beauty*100))
         passportTexts[3] = highestAttr
     except:
@@ -377,10 +377,12 @@ def saveMailAddress(addressString):
     config.write()
 
 def resetPositions():
-    global currentX,currentY,currentZ,MIN_X,MIN_Y,MAX_Z
+    global currentX,currentY,currentZ,MIN_X,MIN_Y,MAX_Z,letterIndex,lineNr
     currentX = MIN_X
     currentY = MIN_Y
     currentZ = MAX_Z
+    letterIndex = 1
+    lineNr = 0
 
 if __name__ == '__main__':
     while True:
