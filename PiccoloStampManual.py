@@ -31,7 +31,7 @@ MIN_Y = -2300
 MAX_Z =  2000
 MIN_Z = -2000
 
-passportTexts = ["UNKNOWN","999     BOTH","134","NONE"]
+passportTexts = ["PAULINE","26     F","78","CALM"]
 confusedVariations = ["ABSENT","CONFUSED","NEUTRAL","PENSIVE"]
 # passportTexts = ["ABC"]
 
@@ -387,28 +387,6 @@ def resetPositions():
     lineNr = 0
 
 if __name__ == '__main__':
-    while True:
-        g = gmail.login("sensibledata1@gmail.com", "verysensible")
-        unread = g.inbox().mail(unread=True)
-        if len(unread)>0: 
-            # None
-
-            unread[0].fetch()
-            sender = unread[0].fr
-            # senderNormalized = unicodedata.normalize('NFKD', sender).encode('ascii', 'ignore')
-            # senderSubstring = senderNormalized[:8]
-            senderSubstring = sender[:8]
-            passportTexts[0] = senderSubstring.upper()
-            print "NAME: "+passportTexts[0]
-            unread[0].read()
-            uploadLatestImg()
-            getFaceAnalysis()
-            launchStamp()
-            uploadAnalyzedImg()
-            turnOnFingerprintLED()
-            saveMailAddress(sender)
-            resetPositions()
-
-            # Dear ...,
-        time.sleep(4)
-        g.logout()
+    launchStamp()
+    turnOnFingerprintLED()
+    resetPositions()

@@ -1,7 +1,7 @@
 #!/usr/bin/python2
 from __future__ import division
 from serial import Serial
-import struct, sys, time, FPS, smtplib
+import struct, sys, time, FPS, smtplib, random
 import RPi.GPIO as GPIO
 from configobj import ConfigObj
 from email.MIMEMultipart import MIMEMultipart
@@ -38,6 +38,23 @@ INKPOS_Y = MIN_Y
 currentX = MIN_X
 currentY = MIN_Y
 currentZ = MAX_Z
+
+
+mailVariations = [  'Romain Cazier<br>romain.cazier@gmail.com',
+                    'Cyril Diagne<br>cyril.diagne@gmail.com',
+                    'Patrick Keller<br>ptrck.kllr@gmail.com',
+                    'Guillaume Cerdeira<br>guillaume.ce@gmail.com',
+                    'Sebastian Vargas<br>sebastian.vargas@kairosworks.net',
+                    'Pauline Saglio<br>pauline.saglio@ecal.ch',
+                    'Etienne Malapert<br>etienne.malapert@ecal.ch',
+                    'Blinie Saglio<br>blinie@outlook.fr',
+                    'Nicolas-Guy Kunz<br>ng.kunz@gmail.com',
+                    'Maxime Castelli<br>maximecastelli@yahoo.fr',
+                    'Hugo Simon<br>hugosimon@me.com',
+                    'Christophe Guignard<br>christophe@fabric.ch',
+                    'Charlotte Nicod<br>nicodcharlotte@gmail.com',
+                    'Gael / sold-out.ch <gael@sold-out.ch>',
+                    'Clemence Chatel<br>clemence_1403@hotmail.fr' ]
 
 GPIO.setmode(GPIO.BCM)
 
@@ -134,18 +151,20 @@ def turnOffFingerprintLED():
     fps.Close()
 
 def sendFinalMail():
-    config = ConfigObj('latestMailAdr.cfg')
+    config = ConfigObj('/home/pi/SensibleData/latestMailAdr.cfg')
     try:
-        latestAddress = config['adress']
-        config['adress'] = ""
+        latestAddress = config['address']
+        latestName = config['name']
+        sendMail(latestAddress, latestName)
+        config['address'] = ""
+        config['name'] = "" 
         config.write()
-        sendMail(latestAddress)
     except Exception, e:
     	print "Couldn't send mail: %s" % e
 
-def sendMail(reciever):
+def sendMail(reciever, recieverName):
     # Define these once; use them twice!
-    strFrom = 'Sensible Data <sensibledata1@gmail.com>'
+    strFrom = 'Sensible Data <sensibledata@icloud.com>'
 
     # Create the root message and fill in the from, to, and subject headers
     msgRoot = MIMEMultipart('related')
@@ -159,11 +178,11 @@ def sendMail(reciever):
     msgAlternative = MIMEMultipart('alternative')
     msgRoot.attach(msgAlternative)
 
-    msgText = MIMEText('Hi \n\nHere some people with matching beauty: http://bit.ly/1GIh3Pf \n\nKind regards\nSensible Data')
+    msgText = MIMEText('Hi \n\nPlease allow displaying HTML messages. \n\nKind regards\nSensible Data')
     msgAlternative.attach(msgText)
 
     # We reference the image in the IMG SRC attribute by the ID we give it below
-    msgText = MIMEText('Hi<br><br>Thank you for your contribution. Here a person that matches your nose lenght: <br><img src="cid:image2"><br><br>Romain Cazier<br>romain.cazier@gmail.com<br><br><img src="cid:image3"><br><br>Kind regards<br>Sensible Data Administration<br><br><img src="cid:image1"><br>', 'html')
+    msgText = MIMEText('Dear '+recieverName+',<br><br>Thanks for your contribution. Please find enclosed a contact whose portrait was drawn with an amount of lines similar to yours.<br><br>'+random.choice(mailVariations)+'<br><br>Wishing to get more data from you soon, kind regards,<br><br>Sensible Data Administration<br><br><img src="cid:image1">', 'html')
     msgAlternative.attach(msgText)
 
     # This example assumes the image is in the current directory
@@ -175,29 +194,11 @@ def sendMail(reciever):
     msgImage.add_header('Content-ID', '<image1>')
     msgRoot.attach(msgImage)
 
-    # This example assumes the image is in the current directory
-    fpTwo = open('/home/pi/SensibleData/mailImages/mailattach.jpg', 'rb')
-    msgImageTwo = MIMEImage(fpTwo.read())
-    fpTwo.close()
-
-    # Define the image's ID as referenced above
-    msgImageTwo.add_header('Content-ID', '<image2>')
-    msgRoot.attach(msgImageTwo)
-
-    # This example assumes the image is in the current directory
-    fpThree = open('/home/pi/SensibleData/mailImages/fingerprint.png', 'rb')
-    msgImageThree = MIMEImage(fpThree.read())
-    fpThree.close()
-
-    # Define the image's ID as referenced above
-    msgImageThree.add_header('Content-ID', '<image3>')
-    msgRoot.attach(msgImageThree)
-
     # Send the email (this example assumes SMTP authentication is required)
-    smtp = smtplib.SMTP("smtp.gmail.com", 587)
+    smtp = smtplib.SMTP("smtp.mail.me.com", 587)
     smtp.ehlo()
     smtp.starttls()
-    smtp.login('sensibledata1@gmail.com', 'verysensible')
+    smtp.login('sensibledata@icloud.com', 'Verys3nsible')
     smtp.sendmail(strFrom, reciever, msgRoot.as_string())
     smtp.close()
 
