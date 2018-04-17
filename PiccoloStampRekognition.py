@@ -8,6 +8,8 @@ import requests, json, random
 import FPS
 from email.utils import parseaddr
 from configobj import ConfigObj
+import boto3, pprint
+import boto3.session
 
 # import RPi.GPIO as GPIO
 
@@ -46,7 +48,7 @@ lineNr = 0
 
 Z_DOWN_STAMP_POS = -100
 Z_UP_POS = Z_DOWN_STAMP_POS+1500
-Z_DOWN_INK_POS = Z_DOWN_STAMP_POS + 100  
+Z_DOWN_INK_POS = Z_DOWN_STAMP_POS + 100
 
 INKPOS_X = MAX_X
 INKPOS_Y = MAX_Y
@@ -140,7 +142,7 @@ def sendXYZ(xPos,yPos,zPos):
     currentY = yPos
     currentZ = zPos
     # time.sleep(0.1)
-    
+
 def sendZ(zPos):
     global currentX,currentY,currentZ
     sendXYZ(currentX,currentY,zPos)
@@ -224,26 +226,43 @@ def uploadAnalyzedImg():
 
 def getFaceAnalysis():
     global passportTexts, beauty, age, sex, highestAttr
-    rekognition_url = "http://rekognition.com/func/api/"
-    data = {'api_key':'yHvz5xQExIxdKT1M', 'api_secret':'IoAdfLyIgoPBn8VB', 'jobs':'face_gender_emotion_age_beauty', 'urls':'http://idowebsites.ch/sensibleData/imageToAnalyze.jpg'}
-    print "Trying to get Face Analysis from Rekognition"
-    r = requests.get(rekognition_url, params=data)
-    jsondata =  r.json()
+    rekognition = boto3.client('rekognition')
+    latestImagePath = max(glob.iglob('/home/pi/SensibleData/images/*.jpg'), key=os.path.getctime)
+    with open(latestImagePath, 'rb') as source_image:
+        source_bytes = source_image.read()
+        # botoSession = boto3.session.Session(region_name='eu-central-1')
+        # s3client = botoSession.client('s3', config= boto3.session.Config(signature_version='s3v4'))
+        # bucket_name = "sensiblebucket";
+        # s3client.upload_fileobj(source_image, bucket_name, "uploads/"+filename)
+
+    response = rekognition.detect_faces(
+                   Image={ 'Bytes': source_bytes },
+           Attributes=['ALL'],
+    )
+    pprint.pprint(response)
+
     # jsondata = {u'url': u'https://www.dropbox.com/s/m8gkdlh6zdeea9e/2015-05-16%2016.13.08.jpg?dl=1', u'face_detection': [{u'emotion': {u'calm': 0.03, u'confused': 0.28, u'sad': 0.09}, u'confidence': 0.99, u'beauty': 0.12593, u'pose': {u'yaw': 0.08, u'roll': 0.1, u'pitch': 14.79}, u'sex': 1, u'race': {u'white': 0.58}, u'boundingbox': {u'tl': {u'y': 48.46, u'x': 139.23}, u'size': {u'width': 376.15, u'height': 376.15}}, u'smile': 0, u'quality': {u'brn': 0.51, u'shn': 1.6}, u'mustache': 0, u'beard': 0}], u'ori_img_size': {u'width': 576, u'height': 576}, u'usage': {u'status': u'Succeed.', u'quota': 19968, u'api_id': u'yHvz5xQExIxdKT1M'}}
     print "Got it"
-    print jsondata
     try:
-        emotions = jsondata["face_detection"][0]["emotion"]
-        beauty = jsondata["face_detection"][0]["beauty"]
-        # 0 = female, 1 = male 
-        if jsondata["face_detection"][0]["sex"]==1:
+        firstPerson = response["FaceDetails"][0]
+        emotions = firstPerson["Emotions"]
+        beauty = 100
+        # 0 = female, 1 = male
+        sex = firstPerson["Gender"]["Value"]
+        if sex.lower() == "male":
             sex = "M"
-        else:
+        elif sex.lower() == "female":
             sex = "F"
-        age = jsondata["face_detection"][0]["age"]
+        age = str(int((firstPerson["AgeRange"]["High"] + firstPerson["AgeRange"]["Low"])/2))
         highestVal = 0
         highestAttr = ""
-        for att,val in emotions.iteritems():
+        moods = {}
+        for emotion in emotions:
+            att = emotion['Type'].lower()
+            val = int(round(emotion['Confidence']))
+            moods[att] = val
+
+        for att,val in moods.iteritems():
             print att,val
             if val>highestVal:
                 highestVal = val
@@ -284,7 +303,7 @@ def launchStamp():
     sendZ(Z_UP_POS)
 
     for text in passportTexts:
-    
+
         if type(text)==int:
             text = str(numberToWords(text))
         # the wheel only has uppercase letters
@@ -390,7 +409,7 @@ if __name__ == '__main__':
     while True:
         g = gmail.login("sensibledata1@gmail.com", "verysensible")
         unread = g.inbox().mail(unread=True)
-        if len(unread)>0: 
+        if len(unread)>0:
             # None
 
             unread[0].fetch()
@@ -401,10 +420,10 @@ if __name__ == '__main__':
             passportTexts[0] = senderSubstring.upper()
             print "NAME: "+passportTexts[0]
             unread[0].read()
-            uploadLatestImg()
+            #uploadLatestImg()
             getFaceAnalysis()
             launchStamp()
-            uploadAnalyzedImg()
+            #uploadAnalyzedImg()
             turnOnFingerprintLED()
             saveMailAddress(sender)
             resetPositions()
