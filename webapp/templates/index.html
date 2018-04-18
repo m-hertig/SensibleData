@@ -1,0 +1,93 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+	<title>Add yourself</title>
+	<link rel="stylesheet" href="/styles.css">
+</head>
+<body class="snapshot-view">
+
+
+	{% for message in get_flashed_messages() %}
+		<h1 id="title">{{ message }}</h1>
+	{% endfor %}
+	{% block body %}{% endblock %}
+		<p id="snapshot-infos">Photo time! Your beauty, age and happiness will be judged automatically</p>
+<div class="portrait_wrapper" style="width:360px;margin:0 auto;">
+	<svg id="head-img" style="width:360px;height:360px;position:absolute;z-index:99;" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+		 viewbox="0 0 425.197 425.197" xml:space="preserve">
+		 <path style="fill:none;stroke:#f8f8f8;stroke-width:3;stroke-miterlimit:10;" d="M450.477,462.495
+	 		c0.402-19.616-2.246-43.826-8.7-63.373c-6.276-18.833-17.654-37.83-34.434-48.885c-32.287-21.432-59.12-32.864-95.495-45.103
+	 		c-8.775-3.074-17.69-6.425-25.709-11.194c-7.159-4.254-13.81-16.449-5.546-34.791c18.36-40.749,26.944-93.31,25.707-141.401
+	 		c-1.938-75.327-42.577-96.351-95.09-96.351c-52.523,0-97.386,32.832-95.091,96.32c4.626,128.008,18.724,119.785,29.648,139.57
+	 		c10.624,19.241,0.843,32.077-6.311,36.33c-8.028,4.769-16.943,7.796-25.719,10.87c-36.375,12.238-63.207,23.03-95.486,44.462
+	 		c-16.789,11.055-28.161,31.341-34.432,50.174c-6.459,19.546-9.1,43.755-8.702,63.373"/>
+	</svg>
+		<div id="my_camera"></div>
+</div>
+	<!-- First, include the Webcam.js JavaScript Library -->
+	<!-- <script type="text/javascript" src="/static/webcam.js"></script> -->
+<script type="text/javascript" src="/webcam.js"></script>
+
+
+	<!-- A button for taking snaps -->
+	<div class="snapshot-wrapper btn-add">
+		<a href="#" id="snapshot-button" onclick="take_snapshot()">Cheese!</a>
+	</div>
+
+	<!-- Code to handle taking the snapshot and displaying it locally -->
+	<script language="JavaScript">
+		Webcam.set({
+
+			width:480,
+			height:360,
+
+			swfURL: "/webcam.swf",
+			flashNotDetectedText: "Error: can't access your webcam. Please switch to a browser like Chrome or Firefox or install Adobe Flash Player",
+			// device capture size
+			dest_width: 480,
+			dest_height: 360,
+
+			// final cropped size
+			crop_width: 360,
+			crop_height: 360,
+
+			image_format: 'jpeg',
+			jpeg_quality: 90
+		});
+
+		Webcam.attach( '#my_camera' );
+
+window.onload = function() {	Webcam.on( 'error', function(err) {
+	 document.getElementById('snapshot-infos').innerHTML = err;
+	 document.getElementById('snapshot-infos').className = "";
+ } )};
+		function take_snapshot() {
+
+			Webcam.on('uploadProgress', function() {
+				document.getElementById('snapshot-infos').innerHTML = "Beautiful. Trying to analyze your face..";
+				document.getElementById('snapshot-infos').className = "animated shake infinite";
+			 } );
+
+			// take snapshot and get image data
+			Webcam.snap( function(data_uri) {
+				// display results in page
+				document.getElementById('my_camera').innerHTML =
+					'<img src="'+data_uri+'"/>';
+						Webcam.upload(data_uri, 'http://192.168.0.31:5000/upload', function(code, text) {
+					//Webcam.upload(data_uri, 'http://localhost:5000/upload', function(code, text) {
+						console.log('upload complete. code: '+code+' text: '+text);
+						document.getElementById('snapshot-infos').innerHTML = text;
+				 	 	document.getElementById('snapshot-infos').className = "";
+						t1 = window.setTimeout(function(){ window.location = "/"; },2000);
+					} );
+
+			} );
+
+		}
+	</script>
+
+</body>
+</html>
