@@ -14,9 +14,8 @@
 		<h1 id="title">{{ message }}</h1>
 	{% endfor %}
 	{% block body %}{% endblock %}
-		<p id="snapshot-infos">Photo time! Your beauty, age and happiness will be judged automatically</p>
-<div class="portrait_wrapper" style="width:360px;margin:0 auto;">
-	<svg id="head-img" style="width:360px;height:360px;position:absolute;z-index:99;" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	<div class="portrait_wrapper" style="width:100vw;margin:0 auto;">
+	<svg id="head-img" style="width:100vw;height:100vw;position:absolute;z-index:99;" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
 		 viewbox="0 0 425.197 425.197" xml:space="preserve">
 		 <path style="fill:none;stroke:#f8f8f8;stroke-width:3;stroke-miterlimit:10;" d="M450.477,462.495
 	 		c0.402-19.616-2.246-43.826-8.7-63.373c-6.276-18.833-17.654-37.83-34.434-48.885c-32.287-21.432-59.12-32.864-95.495-45.103
@@ -41,18 +40,18 @@
 	<script language="JavaScript">
 		Webcam.set({
 
-			width:480,
-			height:360,
+			width:1280,
+			height:720,
 
 			swfURL: "/webcam.swf",
 			flashNotDetectedText: "Error: can't access your webcam. Please switch to a browser like Chrome or Firefox or install Adobe Flash Player",
 			// device capture size
-			dest_width: 480,
-			dest_height: 360,
+			dest_width: 1280,
+			dest_height: 720,
 
 			// final cropped size
-			crop_width: 360,
-			crop_height: 360,
+			crop_width: 720,
+			crop_height: 720,
 
 			image_format: 'jpeg',
 			jpeg_quality: 90
@@ -76,7 +75,7 @@ window.onload = function() {	Webcam.on( 'error', function(err) {
 				// display results in page
 				document.getElementById('my_camera').innerHTML =
 					'<img src="'+data_uri+'"/>';
-						Webcam.upload(data_uri, 'http://192.168.0.31:5000/upload', function(code, text) {
+						Webcam.upload(data_uri, '/upload', function(code, text) {
 					//Webcam.upload(data_uri, 'http://localhost:5000/upload', function(code, text) {
 						console.log('upload complete. code: '+code+' text: '+text);
 						document.getElementById('snapshot-infos').innerHTML = text;
