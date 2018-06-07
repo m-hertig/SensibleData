@@ -631,7 +631,7 @@ a:hover {
   #snapshot-button:hover {animation-play-state: running;}
   form > input { margin-right: 15px; }
   #results { float:right; margin:20px; padding:20px; border:1px solid; background:#ccc; }
-  #my_camera {margin: auto; padding-bottom: 20px; width: 480px;height: 480px; max-width: 100%;}
+  #my_camera {margin: auto; padding-bottom: 20px; width: 100vw !important;height: 100vw !important;}
   .snapshot-wrapper{
     text-align:center;
     margin-top: 20px;
@@ -763,16 +763,14 @@ a:hover {
   }
 
   .portrait_wrapper {
-    width:360px;
-    max-width: 100%;
+    width:100vw;
     height: auto;
     margin:0 auto;
     position: relative;
   }
 .head-img {
-  width:360px;
-  height:360px;
-  max-width: 100%;
+  width:100vw;
+  height:100vw;
   height: auto;
   position:absolute;
   z-index:99;
