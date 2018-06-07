@@ -3,9 +3,9 @@
 <html lang="en">
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 	<title>Add yourself</title>
 	<link rel="stylesheet" href="/styles.css">
+	<link rel="manifest" href="/manifest.json">
 </head>
 <body class="snapshot-view">
 
@@ -14,7 +14,7 @@
 		<h1 id="title">{{ message }}</h1>
 	{% endfor %}
 	{% block body %}{% endblock %}
-	<div class="portrait_wrapper" style="width:100vw;margin:0 auto;">
+	<div class="portrait_wrapper">
 	<svg id="head-img" style="width:100vw;height:100vw;position:absolute;z-index:99;" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
 		 viewbox="0 0 425.197 425.197" xml:space="preserve">
 		 <path style="fill:none;stroke:#f8f8f8;stroke-width:3;stroke-miterlimit:10;" d="M450.477,462.495
@@ -25,6 +25,7 @@
 	 		c-16.789,11.055-28.161,31.341-34.432,50.174c-6.459,19.546-9.1,43.755-8.702,63.373"/>
 	</svg>
 		<div id="my_camera"></div>
+			<div id="preview_img"></div>
 </div>
 	<!-- First, include the Webcam.js JavaScript Library -->
 	<!-- <script type="text/javascript" src="/static/webcam.js"></script> -->
@@ -33,58 +34,82 @@
 
 	<!-- A button for taking snaps -->
 	<div class="snapshot-wrapper btn-add">
-		<a href="#" id="snapshot-button" onclick="take_snapshot()">Cheese!</a>
+		<a href="#" id="snapshot-button" onclick="take_snapshot()"></a>
 	</div>
 
 	<!-- Code to handle taking the snapshot and displaying it locally -->
 	<script language="JavaScript">
-		Webcam.set({
+	Webcam.set({
+		width:960,
+		height:1280,
 
-			width:1280,
-			height:720,
+		swfURL: "/webcam.swf",
+		flashNotDetectedText: "Error: can't access your webcam. Please switch to a browser like Chrome or Firefox or install Adobe Flash Player",
 
-			swfURL: "/webcam.swf",
-			flashNotDetectedText: "Error: can't access your webcam. Please switch to a browser like Chrome or Firefox or install Adobe Flash Player",
-			// device capture size
-			dest_width: 1280,
-			dest_height: 720,
+		// final cropped size
+		crop_width: 960,
+		crop_height: 960,
 
-			// final cropped size
-			crop_width: 720,
-			crop_height: 720,
+		constraints: {
+			width: 960,
+			height: 1280
+		},
 
-			image_format: 'jpeg',
-			jpeg_quality: 90
+		image_format: 'jpeg',
+		jpeg_quality: 90
 		});
 
 		Webcam.attach( '#my_camera' );
 
-window.onload = function() {	Webcam.on( 'error', function(err) {
-	 document.getElementById('snapshot-infos').innerHTML = err;
-	 document.getElementById('snapshot-infos').className = "";
- } )};
+// window.onload = function() {	Webcam.on( 'error', function(err) {
+// 	 document.getElementById('snapshot-infos').innerHTML = err;
+// 	 document.getElementById('snapshot-infos').className = "";
+//  } )};
 		function take_snapshot() {
 
-			Webcam.on('uploadProgress', function() {
-				document.getElementById('snapshot-infos').innerHTML = "Beautiful. Trying to analyze your face..";
-				document.getElementById('snapshot-infos').className = "animated shake infinite";
-			 } );
+			// Webcam.on('uploadProgress', function() {
+			// 	document.getElementById('snapshot-infos').innerHTML = "Beautiful. Trying to draw your face..";
+			// 	document.getElementById('snapshot-infos').className = "animated shake infinite";
+			//  } );
 
 			// take snapshot and get image data
 			Webcam.snap( function(data_uri) {
 				// display results in page
-				document.getElementById('my_camera').innerHTML =
+				document.getElementById('preview_img').innerHTML =
 					'<img src="'+data_uri+'"/>';
-						Webcam.upload(data_uri, '/upload', function(code, text) {
-					//Webcam.upload(data_uri, 'http://localhost:5000/upload', function(code, text) {
+					showPreview();
+					Webcam.upload(data_uri, '/upload', function(code, text) {
 						console.log('upload complete. code: '+code+' text: '+text);
-						document.getElementById('snapshot-infos').innerHTML = text;
-				 	 	document.getElementById('snapshot-infos').className = "";
-						t1 = window.setTimeout(function(){ window.location = "/"; },2000);
+						// document.getElementById('snapshot-infos').innerHTML = text;
+				 	 	// document.getElementById('snapshot-infos').className = "";
+					} );
+					Webcam.upload(data_uri, 'https://faceatlas.co/upload', function(code, text) {
+						console.log('upload complete. code: '+code+' text: '+text);
+						// document.getElementById('snapshot-infos').innerHTML = text;
+						// document.getElementById('snapshot-infos').className = "";
 					} );
 
 			} );
 
+		}
+
+		function showPreview() {
+		    var x = document.getElementById("preview_img");
+				var y = document.getElementById("my_camera");
+				var z = document.getElementById("snapshot-button");
+		    x.style.display = "block";
+				y.style.display = "none";
+				z.style.display = "none";
+				window.setTimeout(function(){ hidePreview(); },10000);
+		}
+
+		function hidePreview() {
+			var x = document.getElementById("preview_img");
+			var y = document.getElementById("my_camera");
+			var z = document.getElementById("snapshot-button");
+			x.style.display = "none";
+			y.style.display = "block";
+			z.style.display = "block";
 		}
 	</script>
 

@@ -46,7 +46,7 @@ lineNr = 0
 
 Z_DOWN_STAMP_POS = -100
 Z_UP_POS = Z_DOWN_STAMP_POS+1500
-Z_DOWN_INK_POS = Z_DOWN_STAMP_POS + 100  
+Z_DOWN_INK_POS = Z_DOWN_STAMP_POS + 100
 
 INKPOS_X = MAX_X
 INKPOS_Y = MAX_Y
@@ -140,7 +140,7 @@ def sendXYZ(xPos,yPos,zPos):
     currentY = yPos
     currentZ = zPos
     # time.sleep(0.1)
-    
+
 def sendZ(zPos):
     global currentX,currentY,currentZ
     sendXYZ(currentX,currentY,zPos)
@@ -235,7 +235,7 @@ def getFaceAnalysis():
     try:
         emotions = jsondata["face_detection"][0]["emotion"]
         beauty = jsondata["face_detection"][0]["beauty"]
-        # 0 = female, 1 = male 
+        # 0 = female, 1 = male
         if jsondata["face_detection"][0]["sex"]==1:
             sex = "M"
         else:
@@ -283,74 +283,74 @@ def launchStamp():
 
     sendZ(Z_UP_POS)
 
-    for text in passportTexts:
-    
-        if type(text)==int:
-            text = str(numberToWords(text))
-        # the wheel only has uppercase letters
-        text = text.upper()
-        letterList = list(text)
-
-        for letter in letterList:
-            global currentStep
-            letterUnicodeIndex = ord(letter)
-            time.sleep(0.3)
-            if (letter==" "):
-                makeSpace()
-            else:
-                if(letter=="Y"):
-                    letterUnicodeIndex=73
-                if(letter=="0"):
-                    letterUnicodeIndex=79
-                if(letter=="1"):
-                    letterUnicodeIndex=73
-                if(letter=="2"):
-                    letterUnicodeIndex=89
-                if(letter=="3"):
-                    letterUnicodeIndex=90
-                if(letter=="4"):
-                    letterUnicodeIndex=91
-                if(letter=="5"):
-                    letterUnicodeIndex=92
-                if(letter=="6"):
-                    letterUnicodeIndex=93
-                if(letter=="7"):
-                    letterUnicodeIndex=94
-                if(letter=="8"):
-                    letterUnicodeIndex=95
-                if(letter=="9"):
-                    letterUnicodeIndex=96
-                posInAlphabet = (letterUnicodeIndex-65)
-                nextStep = posInAlphabet*stepsPerLetter
-                # due to unprecise stepper that says it is 1/64 but is not really I add some steps
-                stepsToAdd = posInAlphabet/3
-                nextStep = nextStep+stepsToAdd
-                if IS_WHEEL_INVERTED:
-                    nextStep = -nextStep
-                stepsToTake = (nextStep - currentStep)
-                if stepsToTake<0:
-                    stepsToTake=stepsToTake+2038
-                gotoInkXY()
-                sendRotation(stepsToTake)
-                currentStep = nextStep
-                zDownAndUpInk()
-                time.sleep(0.2)
-                print 'Stepped to '+letter+', '+str(stepsToTake)+' steps'
-                gotoLetterXY()
-                zDownAndUpStamp()
-                # time.s(0.5)
-                print 'got ink'
-                print 'letter stamped'
-
-        letterIndex = 1
-        lineNr = lineNr+1
-
-    # time.s(0.3)
-    sendXY(MIN_X,MAX_Y)
-    sendZ(Z_UP_POS)
-    stepsToZero = fullturnSteps-currentStep
-    sendRotation(stepsToZero)
-    currentStep = 0
+    # for text in passportTexts:
+    #
+    #     if type(text)==int:
+    #         text = str(numberToWords(text))
+    #     # the wheel only has uppercase letters
+    #     text = text.upper()
+    #     letterList = list(text)
+    #
+    #     for letter in letterList:
+    #         global currentStep
+    #         letterUnicodeIndex = ord(letter)
+    #         time.sleep(0.3)
+    #         if (letter==" "):
+    #             makeSpace()
+    #         else:
+    #             if(letter=="Y"):
+    #                 letterUnicodeIndex=73
+    #             if(letter=="0"):
+    #                 letterUnicodeIndex=79
+    #             if(letter=="1"):
+    #                 letterUnicodeIndex=73
+    #             if(letter=="2"):
+    #                 letterUnicodeIndex=89
+    #             if(letter=="3"):
+    #                 letterUnicodeIndex=90
+    #             if(letter=="4"):
+    #                 letterUnicodeIndex=91
+    #             if(letter=="5"):
+    #                 letterUnicodeIndex=92
+    #             if(letter=="6"):
+    #                 letterUnicodeIndex=93
+    #             if(letter=="7"):
+    #                 letterUnicodeIndex=94
+    #             if(letter=="8"):
+    #                 letterUnicodeIndex=95
+    #             if(letter=="9"):
+    #                 letterUnicodeIndex=96
+    #             posInAlphabet = (letterUnicodeIndex-65)
+    #             nextStep = posInAlphabet*stepsPerLetter
+    #             # due to unprecise stepper that says it is 1/64 but is not really I add some steps
+    #             stepsToAdd = posInAlphabet/3
+    #             nextStep = nextStep+stepsToAdd
+    #             if IS_WHEEL_INVERTED:
+    #                 nextStep = -nextStep
+    #             stepsToTake = (nextStep - currentStep)
+    #             if stepsToTake<0:
+    #                 stepsToTake=stepsToTake+2038
+    #             gotoInkXY()
+    #             sendRotation(stepsToTake)
+    #             currentStep = nextStep
+    #             zDownAndUpInk()
+    #             time.sleep(0.2)
+    #             print 'Stepped to '+letter+', '+str(stepsToTake)+' steps'
+    #             gotoLetterXY()
+    #             zDownAndUpStamp()
+    #             # time.s(0.5)
+    #             print 'got ink'
+    #             print 'letter stamped'
+    #
+    #     letterIndex = 1
+    #     lineNr = lineNr+1
+    gotoInkXY()
+    # time.sleep(3)
+    # sendXY(MIN_X,MAX_Y)
+    # sendZ(Z_UP_POS)
+    # stepsToZero = fullturnSteps-currentStep
+    # sendRotation(stepsToZero)
+    # currentStep = 0
     # print 'Stepped to zero'
     time.sleep(1)
     # Send end of transmission

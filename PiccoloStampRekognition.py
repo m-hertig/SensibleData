@@ -5,7 +5,7 @@ import struct, sys
 import gmail, time, unicodedata
 import os, glob, ftplib, urllib
 import requests, json, random
-import FPS
+import FPS, re
 from email.utils import parseaddr
 from configobj import ConfigObj
 import boto3, pprint
@@ -33,7 +33,9 @@ MIN_Y = -2300
 MAX_Z =  2000
 MIN_Z = -2000
 
-passportTexts = ["UNKNOWN","999     BOTH","134","NONE"]
+beatuyScore = random.randrange(35, 100);
+
+passportTexts = ["ANON","999     X",str(beatuyScore),"NONE"]
 confusedVariations = ["ABSENT","CONFUSED","NEUTRAL","PENSIVE"]
 # passportTexts = ["ABC"]
 
@@ -46,7 +48,7 @@ MARGIN_TOP = 1600
 letterIndex = 1
 lineNr = 0
 
-Z_DOWN_STAMP_POS = -100
+Z_DOWN_STAMP_POS = -410
 Z_UP_POS = Z_DOWN_STAMP_POS+1500
 Z_DOWN_INK_POS = Z_DOWN_STAMP_POS + 100
 
@@ -213,7 +215,7 @@ def uploadAnalyzedImg():
     global latestImagePath,beauty,age,sex,highestAttr
     session = ftplib.FTP('109.239.61.126','336054-90-sensibleData','JRWZr3EH&&cC')
     # latestImagePath = max(glob.iglob('/home/pi/SensibleData/images/*.jpg'), key=os.path.getctime)
-    newFilename = str(int(beauty*100))+"-"+str(int(age))+"-"+str(sex)+"-"+highestAttr+"-"+str(int(time.time()))+".jpg"
+    newFilename = str(int(beauty))+"-"+str(int(age))+"-"+str(sex)+"-"+highestAttr+"-"+str(int(time.time()))+".jpg"
     filenameUrlEncoded = urllib.quote_plus(newFilename)
     storcommand = "STOR "+"images/"+filenameUrlEncoded
     file = open(latestImagePath,'rb')         # file to send
@@ -226,27 +228,24 @@ def uploadAnalyzedImg():
 
 def getFaceAnalysis():
     global passportTexts, beauty, age, sex, highestAttr
-    rekognition = boto3.client('rekognition')
-    latestImagePath = max(glob.iglob('/home/pi/SensibleData/images/*.jpg'), key=os.path.getctime)
-    with open(latestImagePath, 'rb') as source_image:
-        source_bytes = source_image.read()
-        # botoSession = boto3.session.Session(region_name='eu-central-1')
-        # s3client = botoSession.client('s3', config= boto3.session.Config(signature_version='s3v4'))
-        # bucket_name = "sensiblebucket";
-        # s3client.upload_fileobj(source_image, bucket_name, "uploads/"+filename)
-
-    response = rekognition.detect_faces(
-                   Image={ 'Bytes': source_bytes },
-           Attributes=['ALL'],
-    )
-    pprint.pprint(response)
-
-    # jsondata = {u'url': u'https://www.dropbox.com/s/m8gkdlh6zdeea9e/2015-05-16%2016.13.08.jpg?dl=1', u'face_detection': [{u'emotion': {u'calm': 0.03, u'confused': 0.28, u'sad': 0.09}, u'confidence': 0.99, u'beauty': 0.12593, u'pose': {u'yaw': 0.08, u'roll': 0.1, u'pitch': 14.79}, u'sex': 1, u'race': {u'white': 0.58}, u'boundingbox': {u'tl': {u'y': 48.46, u'x': 139.23}, u'size': {u'width': 376.15, u'height': 376.15}}, u'smile': 0, u'quality': {u'brn': 0.51, u'shn': 1.6}, u'mustache': 0, u'beard': 0}], u'ori_img_size': {u'width': 576, u'height': 576}, u'usage': {u'status': u'Succeed.', u'quota': 19968, u'api_id': u'yHvz5xQExIxdKT1M'}}
-    print "Got it"
     try:
+        # Ask both apis rekognition and faceplusplus
+        # as rekognition provides better results and faceplusplus provides beauty score
+        print "Trying to get aws rekognition Analysis"
+        botoSession = boto3.session.Session(region_name='eu-west-1')
+        rekognition = boto3.client('rekognition')
+        latestImagePath = max(glob.iglob('/home/pi/SensibleData/images/*.jpg'), key=os.path.getctime)
+        with open(latestImagePath, 'rb') as source_image:
+            source_bytes = source_image.read()
+
+            # s3client = botoSession.client('s3', config= boto3.session.Config(signature_version='s3v4'))
+            # bucket_name = "sensiblebucket";
+            # s3client.upload_fileobj(source_image, bucket_name, "uploads/"+filename)
+            
+        response = rekognition.detect_faces(Image={ 'Bytes': source_bytes },Attributes=['ALL'])
+
         firstPerson = response["FaceDetails"][0]
         emotions = firstPerson["Emotions"]
-        beauty = 100
         # 0 = female, 1 = male
         sex = firstPerson["Gender"]["Value"]
         if sex.lower() == "male":
@@ -274,10 +273,40 @@ def getFaceAnalysis():
             highestAttr = random.choice(confusedVariations)
 
         passportTexts[1] = " "+str(int(age))+"     "+sex
-        passportTexts[2] = " "+str(int(beauty*100))
         passportTexts[3] = highestAttr
     except:
-        print "error parsing data"
+      print "error parsing data", sys.exc_info()[0]
+      
+    try:
+        api_url = "https://api-us.faceplusplus.com/facepp/v3/detect"
+        latestImagePath = max(glob.iglob('/home/pi/SensibleData/images/*.jpg'), key=os.path.getctime)
+        fileToAnalyze = {'image_file': open(latestImagePath, 'rb')}
+        data = {'api_key':'QY8OehSk-uGzRMvNiDpemlxkyr1PJI8t', 'api_secret':'M_5iW6pD0x_wf6rFckPuVaeByXdecyu7', 'return_attributes':'beauty,emotion,ethnicity,skinstatus,age,gender'}
+        print "Trying to get Faceplusplus Analysis"
+        r = requests.post(api_url, params=data, files=fileToAnalyze)
+        print r
+        jsondata =  r.json()
+        # jsondata = {u'time_used': 1418, u'image_id': u'tD6dhWYeI/7Paq3XDxIVbg==', u'faces': [{u'attributes': {u'emotion': {u'neutral': 99.923, u'sadness': 0.001, u'disgust': 0.001, u'anger': 0.001, u'surprise': 0.059, u'fear': 0.016, u'happiness': 0.001}, u'beauty': {u'female_score': 70.965, u'male_score': 71.001}, u'gender': {u'value': u'Male'}, u'age': {u'value': 34}, u'skinstatus': {u'health': 24.239, u'stain': 3.233, u'acne': 1.918, u'dark_circle': 8.156}, u'ethnicity': {u'value': u'Black'}}, u'face_token': u'8626ef25346585288ae25a5671be819a', u'face_rectangle': {u'width': 535, u'top': 368, u'height': 535, u'left': 237}}], u'request_id': u'1524045332,eebeacc0-95b3-4e3f-8a7b-37cefa8a3a9b'}
+
+        print "Got it"
+        print jsondata
+        firstFace = jsondata['faces'][0]['attributes']
+        if firstFace["gender"]=="Male":
+          sex = "M"
+          beauty = firstFace["beauty"]["male_score"]
+        else:
+          sex = "F"
+          beauty = firstFace["beauty"]["female_score"]
+          
+        passportTexts[2] = " "+str(int(beauty))
+    except:
+      print "error parsing data", sys.exc_info()[0]
+
+    print passportTexts[1]
+    print passportTexts[2]
+    print passportTexts[3]
+      
+
 
 def launchStamp():
     global serial, MIN_Y, MAX_Y, MIN_X, MAX_X,letterIndex,lineNr, IS_WHEEL_INVERTED
@@ -340,15 +369,15 @@ def launchStamp():
                 if(letter=="9"):
                     letterUnicodeIndex=96
                 posInAlphabet = (letterUnicodeIndex-65)
-                nextStep = posInAlphabet*stepsPerLetter
+                nextStep = int(posInAlphabet*stepsPerLetter)
                 # due to unprecise stepper that says it is 1/64 but is not really I add some steps
-                stepsToAdd = posInAlphabet/3
-                nextStep = nextStep+stepsToAdd
+                #stepsToAdd = posInAlphabet/3
+                #nextStep = nextStep+stepsToAdd
                 if IS_WHEEL_INVERTED:
                     nextStep = -nextStep
                 stepsToTake = (nextStep - currentStep)
-                if stepsToTake<0:
-                    stepsToTake=stepsToTake+2038
+                # if stepsToTake<0:
+                #     stepsToTake=stepsToTake+2038
                 gotoInkXY()
                 sendRotation(stepsToTake)
                 currentStep = nextStep
@@ -367,7 +396,8 @@ def launchStamp():
     # time.s(0.3)
     sendXY(MIN_X,MAX_Y)
     sendZ(Z_UP_POS)
-    stepsToZero = fullturnSteps-currentStep
+    #stepsToZero = fullturnSteps-currentStep
+    stepsToZero = -currentStep
     sendRotation(stepsToZero)
     currentStep = 0
     # print 'Stepped to zero'
@@ -407,27 +437,31 @@ def resetPositions():
 
 if __name__ == '__main__':
     while True:
-        g = gmail.login("sensibledata1@gmail.com", "verysensible")
-        unread = g.inbox().mail(unread=True)
-        if len(unread)>0:
-            # None
+        try:
+            g = gmail.login("sensibledata1@gmail.com", "verysensible")
+            unread = g.inbox().mail(unread=True)
+            print unread
+            if unread:
+                # None
+                unread[0].fetch()
+                sender = unread[0].fr
+                # senderNormalized = unicodedata.normalize('NFKD', sender).encode('ascii', 'ignore')
+                # senderSubstring = senderNormalized[:8]
+                senderSubstring = sender[:8]
+                # remove special chars from string
+                senderSubstringCleaned = re.sub('[^ a-zA-Z0-9]', '', senderSubstring)
+                passportTexts[0] = senderSubstringCleaned.upper()
+                print "NAME: "+passportTexts[0]
+                unread[0].read()
+                #uploadLatestImg()
+                getFaceAnalysis()
+                launchStamp()
+                #uploadAnalyzedImg()
+                turnOnFingerprintLED()
+                saveMailAddress(sender)
+                resetPositions()
 
-            unread[0].fetch()
-            sender = unread[0].fr
-            # senderNormalized = unicodedata.normalize('NFKD', sender).encode('ascii', 'ignore')
-            # senderSubstring = senderNormalized[:8]
-            senderSubstring = sender[:8]
-            passportTexts[0] = senderSubstring.upper()
-            print "NAME: "+passportTexts[0]
-            unread[0].read()
-            #uploadLatestImg()
-            getFaceAnalysis()
-            launchStamp()
-            #uploadAnalyzedImg()
-            turnOnFingerprintLED()
-            saveMailAddress(sender)
-            resetPositions()
-
-            # Dear ...,
-        time.sleep(4)
-        g.logout()
+            time.sleep(4)
+            g.logout()
+        except:
+            pass

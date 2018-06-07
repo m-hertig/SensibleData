@@ -1,8 +1,8 @@
 #!/usr/bin/python2
 
 import cv, sys
-
-TEST_IMAGE = 'martin.png'
+import glob, os
+TEST_IMAGE = max(glob.iglob('/home/pi/SensibleData/images/*.jpg'), key=os.path.getctime)
 MOVE_POINT  = 1
 DRAW_POINT  = 2
 

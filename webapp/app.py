@@ -7,6 +7,7 @@ from flask import Flask, send_from_directory, render_template, redirect, flash, 
 from flask_cors import CORS, cross_origin
 from flask import request
 from werkzeug.utils import secure_filename
+import werkzeug.serving
 import requests, json, sys
 from configobj import ConfigObj
 import certifi
@@ -24,10 +25,6 @@ application.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
 @application.route("/")
-def hello():
-    return "Hello World!"
-
-@application.route("/upload", methods=['GET'])
 def uploadPage():
     flash("Photo Booth")
     return render_template('index.html')
@@ -35,7 +32,6 @@ def uploadPage():
 @application.route("/upload", methods=['POST'])
 def upload():
     configobj = ConfigObj('server.config')
-    print configobj["rekognition_api_key"]
     print 'hallo uploader!!!!'
     flash("Trying to analyze your face!")
     moods = {}
@@ -148,4 +144,6 @@ def get_picture(path):
 
 
 if __name__ == "__main__":
-    application.run(host='0.0.0.0',debug=True)
+#    key = '/home/pi/SensibleData/webapp/ssl/server.key'
+#    cert = '/home/pi/SensibleData/webapp/ssl/server.crt'
+    application.run('0.0.0.0', 80, debug=True)
